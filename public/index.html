@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relational Algebra Processor</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: monospace;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+        }
+        h1 {
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        .input-section {
+            margin: 20px 0;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            font-family: monospace;
+            font-size: 14px;
+            padding: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            background: #333;
+            color: white;
+            border: none;
+        }
+        button:hover {
+            background: #555;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .query-display {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            font-size: 18px;
+            font-family: monospace;
+        }
+        .highlight {
+            background: yellow;
+            font-weight: bold;
+        }
+        .step-info {
+            margin: 10px 0;
+            padding: 10px;
+            background: #e8f4f8;
+            border-left: 4px solid #2196F3;
+        }
+        .data-display {
+            margin: 20px 0;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 10px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background: #333;
+            color: white;
+        }
+        .mermaid-container {
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border: 1px solid #ddd;
+        }
+        .examples {
+            margin: 20px 0;
+            padding: 10px;
+            background: #fffacd;
+            border: 1px solid #ddd;
+        }
+        .examples h3 {
+            margin-top: 0;
+        }
+        .example-query {
+            cursor: pointer;
+            padding: 5px;
+            margin: 5px 0;
+            background: white;
+            border: 1px solid #ddd;
+        }
+        .example-query:hover {
+            background: #f0f0f0;
+        }
+        .symbol-buttons {
+            margin: 10px 0;
+        }
+        .symbol-btn {
+            padding: 8px 15px;
+            margin: 3px;
+            font-size: 18px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .symbol-btn:hover {
+            background: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Relational Algebra Query Processor</h1>
+
+        <div class="examples">
+            <h3>Example Queries (click to use):</h3>
+            <div class="example-query" onclick="loadExample(0)">π[name,age](Students)</div>
+            <div class="example-query" onclick="loadExample(1)">σ[age>25](Students)</div>
+            <div class="example-query" onclick="loadExample(2)">π[name](σ[age>25](Students))</div>
+            <div class="example-query" onclick="loadExample(3)">Students ∪ Teachers</div>
+            <div class="example-query" onclick="loadExample(4)">π[name](Students) ∪ π[name](Teachers)</div>
+            <div class="example-query" onclick="loadExample(5)">Students ⋈_{id=student_id} Enrollments</div>
+            <div class="example-query" onclick="loadExample(6)">π[name,course](Students ⋈_{id=student_id} Enrollments)</div>
+        </div>
+
+        <div class="input-section">
+            <h2>Enter Relational Algebra Query</h2>
+            <div class="symbol-buttons">
+                <strong>Insert Symbol:</strong>
+                <button class="symbol-btn" onclick="insertSymbol('π[]()')">π (Projection)</button>
+                <button class="symbol-btn" onclick="insertSymbol('σ[]()')">σ (Selection)</button>
+                <button class="symbol-btn" onclick="insertSymbol(' ∪ ')">∪ (Union)</button>
+                <button class="symbol-btn" onclick="insertSymbol(' ⋈_{=} ')">⋈ (Join)</button>
+            </div>
+            <textarea id="queryInput" placeholder="Example: π[name,age](σ[age>25](Students))">π[name](σ[age>25](Students))</textarea>
+            <br>
+            <button onclick="parseAndExecute()">Parse & Execute</button>
+            <button onclick="resetQuery()">Reset</button>
+        </div>
+
+        <div id="executionSection" style="display:none;">
+            <h2>Query Execution</h2>
+
+            <div class="query-display" id="queryDisplay"></div>
+
+            <div class="step-info" id="stepInfo"></div>
+
+            <button onclick="previousStep()" id="prevBtn">Previous Step</button>
+            <button onclick="nextStep()" id="nextBtn">Next Step</button>
+
+            <div class="mermaid-container">
+                <h3>Query Visualization</h3>
+                <div id="mermaidDiagram"></div>
+            </div>
+
+            <div class="data-display">
+                <h3>Current Data State</h3>
+                <div id="dataDisplay"></div>
+            </div>
+        </div>
+
+        <div id="errorDisplay" style="color: red; margin: 20px 0;"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
