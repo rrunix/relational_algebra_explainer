@@ -1,0 +1,40 @@
+{
+  "name": "Game Store",
+  "tables": {
+    "Games": [
+      { "id": 1, "title": "The Legend of Zelda", "genre": "Adventure", "price": 59.99, "stock": 25 },
+      { "id": 2, "title": "Dark Souls", "genre": "RPG", "price": 39.99, "stock": 15 },
+      { "id": 3, "title": "Mario Kart", "genre": "Racing", "price": 49.99, "stock": 30 },
+      { "id": 4, "title": "Final Fantasy VII", "genre": "RPG", "price": 69.99, "stock": 10 },
+      { "id": 5, "title": "Street Fighter", "genre": "Fighting", "price": 29.99, "stock": 20 }
+    ],
+    "Customers": [
+      { "id": 101, "name": "John", "email": "john@email.com", "membership": "Gold" },
+      { "id": 102, "name": "Sarah", "email": "sarah@email.com", "membership": "Silver" },
+      { "id": 103, "name": "Mike", "email": "mike@email.com", "membership": "Bronze" },
+      { "id": 104, "name": "Emma", "email": "emma@email.com", "membership": "Gold" }
+    ],
+    "Orders": [
+      { "order_id": 1, "customer_id": 101, "game_id": 1, "quantity": 1, "date": "2024-01-15" },
+      { "order_id": 2, "customer_id": 102, "game_id": 2, "quantity": 2, "date": "2024-01-16" },
+      { "order_id": 3, "customer_id": 101, "game_id": 3, "quantity": 1, "date": "2024-01-17" },
+      { "order_id": 4, "customer_id": 103, "game_id": 4, "quantity": 1, "date": "2024-01-18" },
+      { "order_id": 5, "customer_id": 104, "game_id": 1, "quantity": 1, "date": "2024-01-19" }
+    ],
+    "Reviews": [
+      { "id": 1, "game_id": 1, "customer_id": 101, "rating": 5, "comment": "Masterpiece!" },
+      { "id": 2, "game_id": 2, "customer_id": 102, "rating": 4, "comment": "Very challenging" },
+      { "id": 3, "game_id": 3, "customer_id": 101, "rating": 5, "comment": "Best racing game" },
+      { "id": 4, "game_id": 4, "customer_id": 103, "rating": 5, "comment": "Classic RPG" }
+    ]
+  },
+  "mermaidSchema": "erDiagram\n    Games {\n        int id PK\n        string title\n        string genre\n        float price\n        int stock\n    }\n    Customers {\n        int id PK\n        string name\n        string email\n        string membership\n    }\n    Orders {\n        int order_id PK\n        int customer_id FK\n        int game_id FK\n        int quantity\n        string date\n    }\n    Reviews {\n        int id PK\n        int game_id FK\n        int customer_id FK\n        int rating\n        string comment\n    }\n    Customers ||--o{ Orders : \"id=customer_id\"\n    Games ||--o{ Orders : \"id=game_id\"\n    Games ||--o{ Reviews : \"id=game_id\"\n    Customers ||--o{ Reviews : \"id=customer_id\"",
+  "examples": [
+    "π[title,price](Games)",
+    "σ[price<50](Games)",
+    "π[title](σ[genre=RPG](Games))",
+    "Customers ⋈_{id=customer_id} Orders",
+    "π[name,title](Customers ⋈_{id=customer_id} Orders ⋈_{game_id=id} Games)",
+    "σ[rating=5](Reviews)"
+  ]
+}
