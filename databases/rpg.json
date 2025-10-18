@@ -1,0 +1,42 @@
+{
+  "name": "RPG Game",
+  "tables": {
+    "Characters": [
+      { "id": 1, "name": "Aragorn", "class": "Warrior", "level": 45, "hp": 850 },
+      { "id": 2, "name": "Gandalf", "class": "Mage", "level": 50, "hp": 600 },
+      { "id": 3, "name": "Legolas", "class": "Archer", "level": 42, "hp": 700 },
+      { "id": 4, "name": "Frodo", "class": "Rogue", "level": 30, "hp": 500 },
+      { "id": 5, "name": "Gimli", "class": "Warrior", "level": 40, "hp": 800 }
+    ],
+    "Items": [
+      { "id": 101, "name": "Excalibur", "type": "Sword", "damage": 150, "rarity": "Legendary" },
+      { "id": 102, "name": "Health Potion", "type": "Consumable", "damage": 0, "rarity": "Common" },
+      { "id": 103, "name": "Dragon Scale Armor", "type": "Armor", "damage": 0, "rarity": "Epic" },
+      { "id": 104, "name": "Elven Bow", "type": "Bow", "damage": 120, "rarity": "Rare" },
+      { "id": 105, "name": "Staff of Wisdom", "type": "Staff", "damage": 100, "rarity": "Epic" }
+    ],
+    "Inventory": [
+      { "character_id": 1, "item_id": 101, "quantity": 1 },
+      { "character_id": 1, "item_id": 102, "quantity": 5 },
+      { "character_id": 2, "item_id": 105, "quantity": 1 },
+      { "character_id": 3, "item_id": 104, "quantity": 1 },
+      { "character_id": 3, "item_id": 102, "quantity": 3 },
+      { "character_id": 4, "item_id": 102, "quantity": 10 },
+      { "character_id": 5, "item_id": 103, "quantity": 1 }
+    ],
+    "Quests": [
+      { "id": 1, "title": "Defeat the Dragon", "difficulty": "Hard", "reward": 1000, "completed": false },
+      { "id": 2, "title": "Find the Lost Ring", "difficulty": "Medium", "reward": 500, "completed": true },
+      { "id": 3, "title": "Collect 10 Herbs", "difficulty": "Easy", "reward": 100, "completed": true }
+    ]
+  },
+  "mermaidSchema": "erDiagram\n    Characters {\n        int id PK\n        string name\n        string class\n        int level\n        int hp\n    }\n    Items {\n        int id PK\n        string name\n        string type\n        int damage\n        string rarity\n    }\n    Inventory {\n        int character_id FK\n        int item_id FK\n        int quantity\n    }\n    Quests {\n        int id PK\n        string title\n        string difficulty\n        int reward\n        boolean completed\n    }\n    Characters ||--o{ Inventory : \"id=character_id\"\n    Items ||--o{ Inventory : \"id=item_id\"",
+  "examples": [
+    "π[name,class,level](Characters)",
+    "σ[level>40](Characters)",
+    "π[name](σ[rarity=Legendary](Items))",
+    "Characters ⋈_{id=character_id} Inventory",
+    "π[name,item_id,quantity](Characters ⋈_{id=character_id} Inventory)",
+    "σ[difficulty=Hard](Quests)"
+  ]
+}

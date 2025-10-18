@@ -122,11 +122,217 @@
         .symbol-btn:hover {
             background: #1976D2;
         }
+        .schema-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border: 2px solid #333;
+        }
+        .graph-toggle {
+            margin: 10px 0;
+        }
+        .graph-mode-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #4CAF50;
+            transition: .4s;
+            border-radius: 30px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        input:checked + .slider:before {
+            transform: translateX(30px);
+        }
+        .toggle-label {
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .schema-toggle-btn {
+            padding: 8px 15px;
+            margin: 10px 0;
+            background: #666;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .schema-toggle-btn:hover {
+            background: #888;
+        }
+        .controls-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin: 10px 0;
+        }
+        .nav-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        .schema-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+        .db-select {
+            padding: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            border: 1px solid #333;
+        }
+        .file-input {
+            display: none;
+        }
+        .upload-btn, .export-btn {
+            padding: 8px 15px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .upload-btn:hover, .export-btn:hover {
+            background: #45a049;
+        }
+        .export-btn {
+            background: #2196F3;
+        }
+        .export-btn:hover {
+            background: #1976D2;
+        }
+        .schema-section.hidden {
+            display: none;
+        }
+        .format-help {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-left: 4px solid #2196F3;
+        }
+        .format-help.hidden {
+            display: none;
+        }
+        .help-toggle-btn {
+            padding: 8px 15px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .help-toggle-btn:hover {
+            background: #1976D2;
+        }
+        .format-help pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+        .format-help h4 {
+            margin-top: 0;
+            color: #2196F3;
+        }
+        .format-help ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Relational Algebra Query Processor</h1>
+
+        <div>
+            <h2>Database Schema</h2>
+            <div class="schema-controls">
+                <select id="databaseSelect" class="db-select" onchange="switchDatabase()">
+                    <option value="">Loading databases...</option>
+                </select>
+                <input type="file" id="fileInput" class="file-input" accept=".json" onchange="loadCustomDatabase(event)">
+                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">Load Custom DB</button>
+                <button class="export-btn" onclick="exportCurrentDatabase()">Export Current DB</button>
+                <button class="help-toggle-btn" onclick="toggleFormatHelp()" id="helpToggleBtn">Show Format Help</button>
+                <button class="schema-toggle-btn" onclick="toggleSchema()" id="schemaToggleBtn">Hide Schema</button>
+            </div>
+
+            <div class="format-help hidden" id="formatHelp">
+                <h4>Database JSON Format</h4>
+                <p>To create a custom database, your JSON file must follow this structure:</p>
+
+                <pre>{
+  "name": "Your Database Name",
+  "tables": {
+    "TableName1": [
+      { "column1": "value1", "column2": 123, ... },
+      { "column1": "value2", "column2": 456, ... }
+    ],
+    "TableName2": [
+      { "id": 1, "name": "example", ... }
+    ]
+  },
+  "mermaidSchema": "erDiagram\n...",  // Optional
+  "examples": [                        // Optional
+    "π[column1](TableName1)",
+    "σ[column2>100](TableName2)"
+  ]
+}</pre>
+
+                <p><strong>Required fields:</strong></p>
+                <ul>
+                    <li><code>name</code>: String - Name of your database</li>
+                    <li><code>tables</code>: Object - Contains your tables as key-value pairs, where each table is an array of row objects</li>
+                </ul>
+
+                <p><strong>Optional fields:</strong></p>
+                <ul>
+                    <li><code>mermaidSchema</code>: String - Custom Mermaid ER diagram (auto-generated if not provided)</li>
+                    <li><code>examples</code>: Array - Example relational algebra queries for this database</li>
+                </ul>
+
+                <p><strong>Tip:</strong> Use "Export Current DB" to see a complete example of the format!</p>
+            </div>
+
+            <div class="schema-section" id="schemaSection">
+                <div id="schemaDiagram"></div>
+            </div>
+        </div>
 
         <div class="examples">
             <h3>Example Queries (click to use):</h3>
@@ -161,8 +367,20 @@
 
             <div class="step-info" id="stepInfo"></div>
 
-            <button onclick="previousStep()" id="prevBtn">Previous Step</button>
-            <button onclick="nextStep()" id="nextBtn">Next Step</button>
+            <div class="controls-section">
+                <div class="nav-buttons">
+                    <button onclick="previousStep()" id="prevBtn">Previous Step</button>
+                    <button onclick="nextStep()" id="nextBtn">Next Step</button>
+                </div>
+                <div class="graph-mode-toggle">
+                    <span class="toggle-label">Current</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="graphModeToggle" onchange="toggleGraphMode()">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-label">Full Graph</span>
+                </div>
+            </div>
 
             <div class="mermaid-container">
                 <h3>Query Visualization</h3>

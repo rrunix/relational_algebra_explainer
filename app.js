@@ -1,32 +1,235 @@
-// Sample databases
-const DATABASES = {
-    Students: [
-        { id: 1, name: 'Alice', age: 22, major: 'CS' },
-        { id: 2, name: 'Bob', age: 28, major: 'Math' },
-        { id: 3, name: 'Charlie', age: 25, major: 'CS' },
-        { id: 4, name: 'Diana', age: 23, major: 'Physics' },
-        { id: 5, name: 'Eve', age: 30, major: 'Math' }
-    ],
-    Teachers: [
-        { id: 101, name: 'Prof. Smith', age: 45, subject: 'CS' },
-        { id: 102, name: 'Prof. Jones', age: 38, subject: 'Math' },
-        { id: 103, name: 'Alice', age: 22, subject: 'Physics' }
-    ],
-    Enrollments: [
-        { student_id: 1, course: 'Database Systems', grade: 'A' },
-        { student_id: 2, course: 'Algorithms', grade: 'B' },
-        { student_id: 3, course: 'Database Systems', grade: 'A' },
-        { student_id: 1, course: 'Machine Learning', grade: 'B' },
-        { student_id: 4, course: 'Physics 101', grade: 'A' }
-    ]
-};
+// Database management
+let availableDatabases = [];
+let currentDatabase = null;
+let DATABASES = {}; // Will be populated from current database
 
 let currentSteps = [];
 let currentStepIndex = -1;
 let parsedQuery = null;
+let currentGraphMode = 'operation'; // 'operation' or 'execution'
 
 // Initialize Mermaid
 mermaid.initialize({ startOnLoad: false, theme: 'default' });
+
+// Database file list
+const DATABASE_FILES = [
+    'databases/university.json',
+    'databases/rpg.json',
+    'databases/game-store.json',
+    'databases/library.json'
+];
+
+// Generate and display database schema on page load
+window.addEventListener('DOMContentLoaded', () => {
+    loadAllDatabases();
+});
+
+// Load all database JSON files
+async function loadAllDatabases() {
+    availableDatabases = [];
+
+    for (const file of DATABASE_FILES) {
+        try {
+            const response = await fetch(file);
+            const database = await response.json();
+            availableDatabases.push(database);
+        } catch (error) {
+            console.error(`Failed to load ${file}:`, error);
+        }
+    }
+
+    // Populate dropdown
+    const select = document.getElementById('databaseSelect');
+    select.innerHTML = '';
+
+    availableDatabases.forEach((db, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = db.name;
+        select.appendChild(option);
+    });
+
+    // Load first database by default
+    if (availableDatabases.length > 0) {
+        select.value = 0;
+        switchDatabase();
+    }
+}
+
+// Switch to a different database
+function switchDatabase() {
+    const select = document.getElementById('databaseSelect');
+    const index = parseInt(select.value);
+
+    if (index >= 0 && index < availableDatabases.length) {
+        currentDatabase = availableDatabases[index];
+        DATABASES = currentDatabase.tables;
+
+        // Update schema display
+        displayDatabaseSchema();
+
+        // Update examples
+        updateExamples();
+
+        // Reset query execution
+        resetQuery();
+    }
+}
+
+function displayDatabaseSchema() {
+    if (!currentDatabase) return;
+
+    let schemaDiagram;
+
+    // Use provided Mermaid schema if available, otherwise auto-generate
+    if (currentDatabase.mermaidSchema) {
+        schemaDiagram = currentDatabase.mermaidSchema;
+    } else {
+        schemaDiagram = generateMermaidSchema(currentDatabase.tables);
+    }
+
+    const schemaContainer = document.getElementById('schemaDiagram');
+    schemaContainer.innerHTML = '';
+
+    const diagramDiv = document.createElement('div');
+    diagramDiv.className = 'mermaid';
+    diagramDiv.textContent = schemaDiagram;
+    schemaContainer.appendChild(diagramDiv);
+
+    mermaid.run({ nodes: [diagramDiv] });
+}
+
+// Auto-generate Mermaid schema from table structure
+function generateMermaidSchema(tables) {
+    let schema = 'erDiagram\n';
+
+    // Generate entity definitions
+    for (const [tableName, rows] of Object.entries(tables)) {
+        if (rows.length > 0) {
+            schema += `    ${tableName} {\n`;
+            const firstRow = rows[0];
+            for (const [key, value] of Object.entries(firstRow)) {
+                const type = typeof value === 'number' ? 'int' :
+                            typeof value === 'boolean' ? 'boolean' : 'string';
+                const isPK = key === 'id' || key.endsWith('_id');
+                const suffix = isPK && key === 'id' ? ' PK' : isPK ? ' FK' : '';
+                schema += `        ${type} ${key}${suffix}\n`;
+            }
+            schema += '    }\n';
+        }
+    }
+
+    return schema;
+}
+
+// Update example queries based on current database
+function updateExamples() {
+    const examplesContainer = document.querySelector('.examples');
+    const examplesDiv = examplesContainer.querySelector('div').parentElement;
+
+    // Clear existing examples (except header)
+    examplesDiv.innerHTML = '<h3>Example Queries (click to use):</h3>';
+
+    // Add examples from database or use defaults
+    const examples = currentDatabase.examples || [];
+
+    examples.forEach((query, index) => {
+        const div = document.createElement('div');
+        div.className = 'example-query';
+        div.textContent = query;
+        div.onclick = () => loadExample(index);
+        examplesDiv.appendChild(div);
+    });
+}
+
+// Load custom database from file upload
+function loadCustomDatabase(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const database = JSON.parse(e.target.result);
+
+            // Validate database structure
+            if (!database.name || !database.tables) {
+                alert('Invalid database format. Must include "name" and "tables" fields.');
+                return;
+            }
+
+            // Add to available databases
+            availableDatabases.push(database);
+
+            // Update dropdown
+            const select = document.getElementById('databaseSelect');
+            const option = document.createElement('option');
+            option.value = availableDatabases.length - 1;
+            option.textContent = database.name + ' (custom)';
+            select.appendChild(option);
+
+            // Switch to new database
+            select.value = availableDatabases.length - 1;
+            switchDatabase();
+
+            alert(`Database "${database.name}" loaded successfully!`);
+        } catch (error) {
+            alert('Failed to load database: ' + error.message);
+        }
+    };
+    reader.readAsText(file);
+
+    // Reset file input
+    event.target.value = '';
+}
+
+// Export current database as JSON
+function exportCurrentDatabase() {
+    if (!currentDatabase) {
+        alert('No database loaded');
+        return;
+    }
+
+    const json = JSON.stringify(currentDatabase, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentDatabase.name.toLowerCase().replace(/\s+/g, '-')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// Toggle schema visibility
+function toggleSchema() {
+    const schemaSection = document.getElementById('schemaSection');
+    const toggleBtn = document.getElementById('schemaToggleBtn');
+
+    if (schemaSection.classList.contains('hidden')) {
+        schemaSection.classList.remove('hidden');
+        toggleBtn.textContent = 'Hide Schema';
+    } else {
+        schemaSection.classList.add('hidden');
+        toggleBtn.textContent = 'Show Schema';
+    }
+}
+
+// Toggle format help visibility
+function toggleFormatHelp() {
+    const formatHelp = document.getElementById('formatHelp');
+    const toggleBtn = document.getElementById('helpToggleBtn');
+
+    if (formatHelp.classList.contains('hidden')) {
+        formatHelp.classList.remove('hidden');
+        toggleBtn.textContent = 'Hide Format Help';
+    } else {
+        formatHelp.classList.add('hidden');
+        toggleBtn.textContent = 'Show Format Help';
+    }
+}
 
 // Token types
 const TOKEN_TYPES = {
@@ -465,7 +668,7 @@ function evaluateCondition(row, condition) {
     return true;
 }
 
-// Generate Mermaid diagram for current step
+// Generate Mermaid diagram for current step (operation view)
 function generateMermaidDiagram(step, stepIndex, totalSteps) {
     let diagram = 'graph TD\n';
 
@@ -515,6 +718,63 @@ function generateMermaidDiagram(step, stepIndex, totalSteps) {
     return diagram;
 }
 
+// Generate full execution graph showing all steps
+function generateFullExecutionGraph(currentStepIndex) {
+    let diagram = 'graph TD\n';
+
+    // Create nodes for all steps
+    currentSteps.forEach((step, idx) => {
+        const stepId = `step${idx}`;
+        const isCurrentStep = idx === currentStepIndex;
+        const prefix = isCurrentStep ? '▶ ' : '';
+
+        diagram += `    ${stepId}["${prefix}Step ${idx + 1}: ${step.description}\\n${step.data.length} rows"]\n`;
+
+        // Color based on operation type
+        let color = '#E0E0E0'; // default gray
+        if (step.type === 'RELATION') color = '#90EE90'; // green
+        else if (step.type === 'PROJECTION') color = '#87CEEB'; // sky blue
+        else if (step.type === 'SELECTION') color = '#FFB6C1'; // pink
+        else if (step.type === 'UNION') color = '#DDA0DD'; // plum
+        else if (step.type === 'JOIN') color = '#FFD700'; // gold
+
+        diagram += `    style ${stepId} fill:${color}`;
+
+        // Highlight current step with bold border
+        if (isCurrentStep) {
+            diagram += ',stroke:#FF0000,stroke-width:4px';
+        }
+        diagram += '\n';
+    });
+
+    // Create edges based on operation dependencies
+    currentSteps.forEach((step, idx) => {
+        if (step.type === 'PROJECTION' || step.type === 'SELECTION') {
+            // Unary operations - connect to previous step
+            if (idx > 0) {
+                diagram += `    step${idx - 1} --> step${idx}\n`;
+            }
+        } else if (step.type === 'UNION' || step.type === 'JOIN') {
+            // Binary operations - connect to two previous steps
+            if (idx >= 2) {
+                diagram += `    step${idx - 2} --> step${idx}\n`;
+                diagram += `    step${idx - 1} --> step${idx}\n`;
+            }
+        }
+    });
+
+    return diagram;
+}
+
+// Toggle between graph modes
+function toggleGraphMode() {
+    const toggle = document.getElementById('graphModeToggle');
+    currentGraphMode = toggle.checked ? 'execution' : 'operation';
+
+    // Redisplay current step with new graph mode
+    displayStep(currentStepIndex);
+}
+
 // Display functions
 function displayStep(stepIndex) {
     if (stepIndex < 0 || stepIndex >= currentSteps.length) {
@@ -559,8 +819,14 @@ function displayStep(stepIndex) {
         dataDisplay.innerHTML = '<p>No data (empty result set)</p>';
     }
 
-    // Generate and display Mermaid diagram
-    const diagram = generateMermaidDiagram(step, stepIndex, currentSteps.length);
+    // Generate and display Mermaid diagram based on current mode
+    let diagram;
+    if (currentGraphMode === 'operation') {
+        diagram = generateMermaidDiagram(step, stepIndex, currentSteps.length);
+    } else {
+        diagram = generateFullExecutionGraph(stepIndex);
+    }
+
     const mermaidContainer = document.getElementById('mermaidDiagram');
     mermaidContainer.innerHTML = '';
 
@@ -637,19 +903,11 @@ function resetQuery() {
     document.getElementById('errorDisplay').textContent = '';
 }
 
-// Example queries
-const EXAMPLES = [
-    'π[name,age](Students)',
-    'σ[age>25](Students)',
-    'π[name](σ[age>25](Students))',
-    'Students ∪ Teachers',
-    'π[name](Students) ∪ π[name](Teachers)',
-    'Students ⋈_{id=student_id} Enrollments',
-    'π[name,course](Students ⋈_{id=student_id} Enrollments)'
-];
-
 function loadExample(index) {
-    document.getElementById('queryInput').value = EXAMPLES[index];
+    const examples = currentDatabase?.examples || [];
+    if (index >= 0 && index < examples.length) {
+        document.getElementById('queryInput').value = examples[index];
+    }
 }
 
 function insertSymbol(symbol) {

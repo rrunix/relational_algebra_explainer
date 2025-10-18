@@ -1,0 +1,34 @@
+{
+  "name": "University",
+  "tables": {
+    "Students": [
+      { "id": 1, "name": "Alice", "age": 22, "major": "CS" },
+      { "id": 2, "name": "Bob", "age": 28, "major": "Math" },
+      { "id": 3, "name": "Charlie", "age": 25, "major": "CS" },
+      { "id": 4, "name": "Diana", "age": 23, "major": "Physics" },
+      { "id": 5, "name": "Eve", "age": 30, "major": "Math" }
+    ],
+    "Teachers": [
+      { "id": 101, "name": "Prof. Smith", "age": 45, "subject": "CS" },
+      { "id": 102, "name": "Prof. Jones", "age": 38, "subject": "Math" },
+      { "id": 103, "name": "Alice", "age": 22, "subject": "Physics" }
+    ],
+    "Enrollments": [
+      { "student_id": 1, "course": "Database Systems", "grade": "A" },
+      { "student_id": 2, "course": "Algorithms", "grade": "B" },
+      { "student_id": 3, "course": "Database Systems", "grade": "A" },
+      { "student_id": 1, "course": "Machine Learning", "grade": "B" },
+      { "student_id": 4, "course": "Physics 101", "grade": "A" }
+    ]
+  },
+  "mermaidSchema": "erDiagram\n    Students {\n        int id PK\n        string name\n        int age\n        string major\n    }\n    Teachers {\n        int id PK\n        string name\n        int age\n        string subject\n    }\n    Enrollments {\n        int student_id FK\n        string course\n        string grade\n    }\n    Students ||--o{ Enrollments : \"id=student_id\"",
+  "examples": [
+    "π[name,age](Students)",
+    "σ[age>25](Students)",
+    "π[name](σ[age>25](Students))",
+    "Students ∪ Teachers",
+    "π[name](Students) ∪ π[name](Teachers)",
+    "Students ⋈_{id=student_id} Enrollments",
+    "π[name,course](Students ⋈_{id=student_id} Enrollments)"
+  ]
+}
