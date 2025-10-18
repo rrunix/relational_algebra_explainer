@@ -131,19 +131,53 @@
         .graph-toggle {
             margin: 10px 0;
         }
-        .toggle-btn {
-            padding: 8px 15px;
-            margin: 3px;
-            background: #4CAF50;
-            color: white;
-            border: none;
+        .graph-mode-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
             cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #4CAF50;
+            transition: .4s;
+            border-radius: 30px;
         }
-        .toggle-btn:hover {
-            background: #45a049;
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
         }
-        .toggle-btn.active {
-            background: #2196F3;
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        input:checked + .slider:before {
+            transform: translateX(30px);
+        }
+        .toggle-label {
+            font-size: 14px;
+            font-weight: bold;
         }
         .schema-toggle-btn {
             padding: 8px 15px;
@@ -338,9 +372,13 @@
                     <button onclick="previousStep()" id="prevBtn">Previous Step</button>
                     <button onclick="nextStep()" id="nextBtn">Next Step</button>
                 </div>
-                <div class="graph-toggle">
-                    <button class="toggle-btn active" onclick="switchGraph('operation')" id="operationBtn">Current Operation</button>
-                    <button class="toggle-btn" onclick="switchGraph('execution')" id="executionBtn">Full Execution Graph</button>
+                <div class="graph-mode-toggle">
+                    <span class="toggle-label">Current</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="graphModeToggle" onchange="toggleGraphMode()">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-label">Full Graph</span>
                 </div>
             </div>
 

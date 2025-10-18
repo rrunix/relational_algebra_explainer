@@ -766,21 +766,10 @@ function generateFullExecutionGraph(currentStepIndex) {
     return diagram;
 }
 
-// Switch between graph modes
-function switchGraph(mode) {
-    currentGraphMode = mode;
-
-    // Update button states
-    const operationBtn = document.getElementById('operationBtn');
-    const executionBtn = document.getElementById('executionBtn');
-
-    if (mode === 'operation') {
-        operationBtn.classList.add('active');
-        executionBtn.classList.remove('active');
-    } else {
-        operationBtn.classList.remove('active');
-        executionBtn.classList.add('active');
-    }
+// Toggle between graph modes
+function toggleGraphMode() {
+    const toggle = document.getElementById('graphModeToggle');
+    currentGraphMode = toggle.checked ? 'execution' : 'operation';
 
     // Redisplay current step with new graph mode
     displayStep(currentStepIndex);
