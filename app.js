@@ -2,6 +2,7 @@
 let availableDatabases = [];
 let currentDatabase = null;
 let DATABASES = {}; // Will be populated from current database
+let DATABASE_SCHEMA = {}; // Will be populated with schema metadata
 
 let currentSteps = [];
 let currentStepIndex = -1;
@@ -13,10 +14,11 @@ mermaid.initialize({ startOnLoad: false, theme: 'default' });
 
 // Database file list
 const DATABASE_FILES = [
-    'databases/university.json',
-    'databases/rpg.json',
-    'databases/game-store.json',
-    'databases/library.json'
+    'databases/publishing.json'
+    // 'databases/university.json',
+    // 'databases/rpg.json',
+    // 'databases/game-store.json',
+    // 'databases/library.json'
 ];
 
 // Generate and display database schema on page load
@@ -64,6 +66,7 @@ function switchDatabase() {
     if (index >= 0 && index < availableDatabases.length) {
         currentDatabase = availableDatabases[index];
         DATABASES = currentDatabase.tables;
+        DATABASE_SCHEMA = currentDatabase.schema || {};
 
         // Update schema display
         displayDatabaseSchema();
@@ -236,6 +239,9 @@ const TOKEN_TYPES = {
     PROJECTION: 'π',
     SELECTION: 'σ',
     UNION: '∪',
+    DIFFERENCE: '−',
+    INTERSECTION: '∩',
+    PRODUCT: '×',
     JOIN: '⋈',
     LPAREN: '(',
     RPAREN: ')',
@@ -272,6 +278,15 @@ function tokenize(query) {
             i++;
         } else if (char === '∪' || char === '\u222A') {
             tokens.push({ type: TOKEN_TYPES.UNION, value: '∪', pos: i });
+            i++;
+        } else if (char === '−' || char === '\u2212') {
+            tokens.push({ type: TOKEN_TYPES.DIFFERENCE, value: '−', pos: i });
+            i++;
+        } else if (char === '∩' || char === '\u2229') {
+            tokens.push({ type: TOKEN_TYPES.INTERSECTION, value: '∩', pos: i });
+            i++;
+        } else if (char === '×' || char === '\u00D7') {
+            tokens.push({ type: TOKEN_TYPES.PRODUCT, value: '×', pos: i });
             i++;
         } else if (char === '⋈' || char === '\u22C8') {
             tokens.push({ type: TOKEN_TYPES.JOIN, value: '⋈', pos: i });
@@ -331,33 +346,47 @@ class Parser {
     parseExpression() {
         let left = this.parsePrimary();
 
-        // Check for binary operators (join and union)
+        // Check for binary operators (join, union, difference, intersection, product)
         while (this.peek()) {
             const token = this.peek();
 
-            // Check for join
+            // Check for join (theta join with condition or natural join without)
             if (token.type === TOKEN_TYPES.JOIN) {
-                const joinToken = this.consume();
-                this.expect(TOKEN_TYPES.UNDERSCORE);
-                this.expect(TOKEN_TYPES.LBRACE);
+                this.consume();
 
-                // Parse join condition (e.g., id=student_id)
-                let condition = '';
-                while (this.peek() && this.peek().type !== TOKEN_TYPES.RBRACE) {
-                    condition += this.consume().value;
+                // Check if it's a theta join (with _{condition}) or natural join
+                if (this.peek() && this.peek().type === TOKEN_TYPES.UNDERSCORE) {
+                    this.expect(TOKEN_TYPES.UNDERSCORE);
+                    this.expect(TOKEN_TYPES.LBRACE);
+
+                    // Parse join condition (e.g., id=student_id)
+                    let condition = '';
+                    while (this.peek() && this.peek().type !== TOKEN_TYPES.RBRACE) {
+                        condition += this.consume().value;
+                    }
+                    this.expect(TOKEN_TYPES.RBRACE);
+
+                    const right = this.parsePrimary();
+
+                    left = {
+                        type: 'JOIN',
+                        condition: condition,
+                        left: left,
+                        right: right,
+                        startPos: left.startPos,
+                        endPos: right.endPos
+                    };
+                } else {
+                    // Natural join (no condition)
+                    const right = this.parsePrimary();
+                    left = {
+                        type: 'NATURAL_JOIN',
+                        left: left,
+                        right: right,
+                        startPos: left.startPos,
+                        endPos: right.endPos
+                    };
                 }
-                this.expect(TOKEN_TYPES.RBRACE);
-
-                const right = this.parsePrimary();
-
-                left = {
-                    type: 'JOIN',
-                    condition: condition,
-                    left: left,
-                    right: right,
-                    startPos: left.startPos,
-                    endPos: right.endPos
-                };
             }
             // Check for union
             else if (token.type === TOKEN_TYPES.UNION) {
@@ -365,6 +394,45 @@ class Parser {
                 const right = this.parseExpression();
                 return {
                     type: 'UNION',
+                    operator: op.value,
+                    left: left,
+                    right: right,
+                    startPos: left.startPos,
+                    endPos: right.endPos
+                };
+            }
+            // Check for difference
+            else if (token.type === TOKEN_TYPES.DIFFERENCE) {
+                const op = this.consume();
+                const right = this.parseExpression();
+                return {
+                    type: 'DIFFERENCE',
+                    operator: op.value,
+                    left: left,
+                    right: right,
+                    startPos: left.startPos,
+                    endPos: right.endPos
+                };
+            }
+            // Check for intersection
+            else if (token.type === TOKEN_TYPES.INTERSECTION) {
+                const op = this.consume();
+                const right = this.parseExpression();
+                return {
+                    type: 'INTERSECTION',
+                    operator: op.value,
+                    left: left,
+                    right: right,
+                    startPos: left.startPos,
+                    endPos: right.endPos
+                };
+            }
+            // Check for product
+            else if (token.type === TOKEN_TYPES.PRODUCT) {
+                const op = this.consume();
+                const right = this.parseExpression();
+                return {
+                    type: 'PRODUCT',
                     operator: op.value,
                     left: left,
                     right: right,
@@ -486,12 +554,68 @@ class Parser {
     }
 }
 
+// Helper function to get relation name from AST node
+function getRelationName(node) {
+    if (node.type === 'RELATION') {
+        return node.name;
+    } else if (node.type === 'PROJECTION' || node.type === 'SELECTION') {
+        return getRelationName(node.relation);
+    } else if (node.type === 'JOIN' || node.type === 'NATURAL_JOIN' ||
+               node.type === 'UNION' || node.type === 'DIFFERENCE' ||
+               node.type === 'INTERSECTION' || node.type === 'PRODUCT') {
+        // For binary operations, try to get the left relation name
+        return getRelationName(node.left);
+    }
+    return null;
+}
+
+// Helper function to find join columns based on foreign key relationships
+function findJoinColumns(leftRelation, rightRelation) {
+    const joinColumns = [];
+
+    if (!DATABASE_SCHEMA[leftRelation] || !DATABASE_SCHEMA[rightRelation]) {
+        return joinColumns;
+    }
+
+    const leftSchema = DATABASE_SCHEMA[leftRelation];
+    const rightSchema = DATABASE_SCHEMA[rightRelation];
+
+    // Check if right relation has FK to left relation
+    if (rightSchema.fks) {
+        for (const fk of rightSchema.fks) {
+            const refParts = fk.references.split('.');
+            if (refParts[0] === leftRelation) {
+                joinColumns.push({
+                    leftCol: refParts[1],
+                    rightCol: fk.column
+                });
+            }
+        }
+    }
+
+    // Check if left relation has FK to right relation
+    if (leftSchema.fks) {
+        for (const fk of leftSchema.fks) {
+            const refParts = fk.references.split('.');
+            if (refParts[0] === rightRelation) {
+                joinColumns.push({
+                    leftCol: fk.column,
+                    rightCol: refParts[1]
+                });
+            }
+        }
+    }
+
+    return joinColumns;
+}
+
 // Query executor - converts AST to execution steps
 function createExecutionSteps(ast, originalQuery) {
     const steps = [];
 
     function traverse(node, depth = 0) {
         if (node.type === 'RELATION') {
+            const stepIndex = steps.length;
             steps.push({
                 type: 'RELATION',
                 description: `Access base relation: ${node.name}`,
@@ -500,14 +624,16 @@ function createExecutionSteps(ast, originalQuery) {
                 depth: depth,
                 query: originalQuery,
                 highlightStart: node.startPos,
-                highlightEnd: node.endPos
+                highlightEnd: node.endPos,
+                parents: []
             });
+            return stepIndex;
         } else if (node.type === 'PROJECTION') {
             // First process the relation
-            traverse(node.relation, depth + 1);
+            const inputStepIndex = traverse(node.relation, depth + 1);
 
             // Then apply projection
-            const inputData = steps[steps.length - 1].data;
+            const inputData = steps[inputStepIndex].data;
             const outputData = inputData.map(row => {
                 const newRow = {};
                 node.attributes.forEach(attr => {
@@ -518,6 +644,7 @@ function createExecutionSteps(ast, originalQuery) {
                 return newRow;
             });
 
+            const stepIndex = steps.length;
             steps.push({
                 type: 'PROJECTION',
                 description: `Project attributes: [${node.attributes.join(', ')}]`,
@@ -527,18 +654,21 @@ function createExecutionSteps(ast, originalQuery) {
                 depth: depth,
                 query: originalQuery,
                 highlightStart: node.startPos,
-                highlightEnd: node.endPos
+                highlightEnd: node.endPos,
+                parents: [inputStepIndex]
             });
+            return stepIndex;
         } else if (node.type === 'SELECTION') {
             // First process the relation
-            traverse(node.relation, depth + 1);
+            const inputStepIndex = traverse(node.relation, depth + 1);
 
             // Then apply selection
-            const inputData = steps[steps.length - 1].data;
+            const inputData = steps[inputStepIndex].data;
             const outputData = inputData.filter(row => {
                 return evaluateCondition(row, node.condition);
             });
 
+            const stepIndex = steps.length;
             steps.push({
                 type: 'SELECTION',
                 description: `Filter rows where: ${node.condition}`,
@@ -548,16 +678,18 @@ function createExecutionSteps(ast, originalQuery) {
                 depth: depth,
                 query: originalQuery,
                 highlightStart: node.startPos,
-                highlightEnd: node.endPos
+                highlightEnd: node.endPos,
+                parents: [inputStepIndex]
             });
+            return stepIndex;
         } else if (node.type === 'UNION') {
             // Process left relation
-            traverse(node.left, depth + 1);
-            const leftData = steps[steps.length - 1].data;
+            const leftStepIndex = traverse(node.left, depth + 1);
+            const leftData = steps[leftStepIndex].data;
 
             // Process right relation
-            traverse(node.right, depth + 1);
-            const rightData = steps[steps.length - 1].data;
+            const rightStepIndex = traverse(node.right, depth + 1);
+            const rightData = steps[rightStepIndex].data;
 
             // Apply union (remove duplicates based on all attributes)
             const combined = [...leftData, ...rightData];
@@ -572,6 +704,7 @@ function createExecutionSteps(ast, originalQuery) {
                 }
             });
 
+            const stepIndex = steps.length;
             steps.push({
                 type: 'UNION',
                 description: `Union of two relations`,
@@ -580,16 +713,18 @@ function createExecutionSteps(ast, originalQuery) {
                 depth: depth,
                 query: originalQuery,
                 highlightStart: node.startPos,
-                highlightEnd: node.endPos
+                highlightEnd: node.endPos,
+                parents: [leftStepIndex, rightStepIndex]
             });
+            return stepIndex;
         } else if (node.type === 'JOIN') {
             // Process left relation
-            traverse(node.left, depth + 1);
-            const leftData = steps[steps.length - 1].data;
+            const leftStepIndex = traverse(node.left, depth + 1);
+            const leftData = steps[leftStepIndex].data;
 
             // Process right relation
-            traverse(node.right, depth + 1);
-            const rightData = steps[steps.length - 1].data;
+            const rightStepIndex = traverse(node.right, depth + 1);
+            const rightData = steps[rightStepIndex].data;
 
             // Parse join condition (e.g., "id=student_id")
             const parts = node.condition.split('=');
@@ -611,6 +746,7 @@ function createExecutionSteps(ast, originalQuery) {
                 });
             });
 
+            const stepIndex = steps.length;
             steps.push({
                 type: 'JOIN',
                 description: `Join on: ${node.condition}`,
@@ -620,8 +756,154 @@ function createExecutionSteps(ast, originalQuery) {
                 depth: depth,
                 query: originalQuery,
                 highlightStart: node.startPos,
-                highlightEnd: node.endPos
+                highlightEnd: node.endPos,
+                parents: [leftStepIndex, rightStepIndex]
             });
+            return stepIndex;
+        } else if (node.type === 'DIFFERENCE') {
+            // Process left relation
+            const leftStepIndex = traverse(node.left, depth + 1);
+            const leftData = steps[leftStepIndex].data;
+
+            // Process right relation
+            const rightStepIndex = traverse(node.right, depth + 1);
+            const rightData = steps[rightStepIndex].data;
+
+            // Apply difference (rows in left but not in right)
+            const rightSet = new Set(rightData.map(row => JSON.stringify(row)));
+            const difference = leftData.filter(row => !rightSet.has(JSON.stringify(row)));
+
+            const stepIndex = steps.length;
+            steps.push({
+                type: 'DIFFERENCE',
+                description: `Difference of two relations (left − right)`,
+                node: node,
+                data: difference,
+                depth: depth,
+                query: originalQuery,
+                highlightStart: node.startPos,
+                highlightEnd: node.endPos,
+                parents: [leftStepIndex, rightStepIndex]
+            });
+            return stepIndex;
+        } else if (node.type === 'INTERSECTION') {
+            // Process left relation
+            const leftStepIndex = traverse(node.left, depth + 1);
+            const leftData = steps[leftStepIndex].data;
+
+            // Process right relation
+            const rightStepIndex = traverse(node.right, depth + 1);
+            const rightData = steps[rightStepIndex].data;
+
+            // Apply intersection (rows in both relations)
+            const rightSet = new Set(rightData.map(row => JSON.stringify(row)));
+            const intersection = leftData.filter(row => rightSet.has(JSON.stringify(row)));
+
+            const stepIndex = steps.length;
+            steps.push({
+                type: 'INTERSECTION',
+                description: `Intersection of two relations`,
+                node: node,
+                data: intersection,
+                depth: depth,
+                query: originalQuery,
+                highlightStart: node.startPos,
+                highlightEnd: node.endPos,
+                parents: [leftStepIndex, rightStepIndex]
+            });
+            return stepIndex;
+        } else if (node.type === 'PRODUCT') {
+            // Process left relation
+            const leftStepIndex = traverse(node.left, depth + 1);
+            const leftData = steps[leftStepIndex].data;
+
+            // Process right relation
+            const rightStepIndex = traverse(node.right, depth + 1);
+            const rightData = steps[rightStepIndex].data;
+
+            // Apply cartesian product
+            const productData = [];
+            leftData.forEach(leftRow => {
+                rightData.forEach(rightRow => {
+                    const mergedRow = { ...leftRow, ...rightRow };
+                    productData.push(mergedRow);
+                });
+            });
+
+            const stepIndex = steps.length;
+            steps.push({
+                type: 'PRODUCT',
+                description: `Cartesian product of two relations`,
+                node: node,
+                data: productData,
+                depth: depth,
+                query: originalQuery,
+                highlightStart: node.startPos,
+                highlightEnd: node.endPos,
+                parents: [leftStepIndex, rightStepIndex]
+            });
+            return stepIndex;
+        } else if (node.type === 'NATURAL_JOIN') {
+            // Process left relation
+            const leftStepIndex = traverse(node.left, depth + 1);
+            const leftData = steps[leftStepIndex].data;
+            const leftRelationName = getRelationName(node.left);
+
+            // Process right relation
+            const rightStepIndex = traverse(node.right, depth + 1);
+            const rightData = steps[rightStepIndex].data;
+            const rightRelationName = getRelationName(node.right);
+
+            // Find join columns using schema metadata
+            const joinColumns = findJoinColumns(leftRelationName, rightRelationName);
+
+            if (joinColumns.length === 0) {
+                throw new Error(`No foreign key relationship found between ${leftRelationName} and ${rightRelationName}`);
+            }
+
+            // Apply natural join using the found columns
+            const joinedData = [];
+            leftData.forEach(leftRow => {
+                rightData.forEach(rightRow => {
+                    let match = true;
+                    for (const { leftCol, rightCol } of joinColumns) {
+                        if (leftRow[leftCol] !== rightRow[rightCol]) {
+                            match = false;
+                            break;
+                        }
+                    }
+                    if (match) {
+                        // Merge rows, removing duplicate columns
+                        const mergedRow = { ...leftRow };
+                        for (const key in rightRow) {
+                            // Only add if not already present (avoid duplicate join columns)
+                            const isDuplicateJoinCol = joinColumns.some(
+                                ({ leftCol, rightCol }) => rightCol === key && leftCol in leftRow
+                            );
+                            if (!isDuplicateJoinCol) {
+                                mergedRow[key] = rightRow[key];
+                            }
+                        }
+                        joinedData.push(mergedRow);
+                    }
+                });
+            });
+
+            const joinDesc = joinColumns.map(({ leftCol, rightCol }) => `${leftCol}=${rightCol}`).join(', ');
+            const stepIndex = steps.length;
+            steps.push({
+                type: 'NATURAL_JOIN',
+                description: `Natural join on: ${joinDesc}`,
+                node: node,
+                data: joinedData,
+                joinColumns: joinDesc,
+                depth: depth,
+                query: originalQuery,
+                highlightStart: node.startPos,
+                highlightEnd: node.endPos,
+                parents: [leftStepIndex, rightStepIndex]
+            });
+            return stepIndex;
         }
     }
 
@@ -701,7 +983,7 @@ function generateMermaidDiagram(step, stepIndex, totalSteps) {
         diagram += `    ${leftId} --> ${stepId}\n`;
         diagram += `    ${rightId} --> ${stepId}\n`;
         diagram += `    style ${stepId} fill:#DDA0DD\n`;
-    } else if (step.type === 'JOIN') {
+    } else if (step.type === 'JOIN' || step.type === 'NATURAL_JOIN') {
         const leftIdx = stepIndex - 2;
         const rightIdx = stepIndex - 1;
         const leftId = `step${leftIdx}`;
@@ -713,6 +995,42 @@ function generateMermaidDiagram(step, stepIndex, totalSteps) {
         diagram += `    ${leftId} --> ${stepId}\n`;
         diagram += `    ${rightId} --> ${stepId}\n`;
         diagram += `    style ${stepId} fill:#FFD700\n`;
+    } else if (step.type === 'DIFFERENCE') {
+        const leftIdx = stepIndex - 2;
+        const rightIdx = stepIndex - 1;
+        const leftId = `step${leftIdx}`;
+        const rightId = `step${rightIdx}`;
+
+        diagram += `    ${leftId}["Left: ${currentSteps[leftIdx].description}\\n${currentSteps[leftIdx].data.length} rows"]\n`;
+        diagram += `    ${rightId}["Right: ${currentSteps[rightIdx].description}\\n${currentSteps[rightIdx].data.length} rows"]\n`;
+        diagram += `    ${stepId}["${step.description}\\n${step.data.length} rows"]\n`;
+        diagram += `    ${leftId} --> ${stepId}\n`;
+        diagram += `    ${rightId} --> ${stepId}\n`;
+        diagram += `    style ${stepId} fill:#FFA500\n`;
+    } else if (step.type === 'INTERSECTION') {
+        const leftIdx = stepIndex - 2;
+        const rightIdx = stepIndex - 1;
+        const leftId = `step${leftIdx}`;
+        const rightId = `step${rightIdx}`;
+
+        diagram += `    ${leftId}["Left: ${currentSteps[leftIdx].description}\\n${currentSteps[leftIdx].data.length} rows"]\n`;
+        diagram += `    ${rightId}["Right: ${currentSteps[rightIdx].description}\\n${currentSteps[rightIdx].data.length} rows"]\n`;
+        diagram += `    ${stepId}["${step.description}\\n${step.data.length} rows"]\n`;
+        diagram += `    ${leftId} --> ${stepId}\n`;
+        diagram += `    ${rightId} --> ${stepId}\n`;
+        diagram += `    style ${stepId} fill:#98FB98\n`;
+    } else if (step.type === 'PRODUCT') {
+        const leftIdx = stepIndex - 2;
+        const rightIdx = stepIndex - 1;
+        const leftId = `step${leftIdx}`;
+        const rightId = `step${rightIdx}`;
+
+        diagram += `    ${leftId}["Left: ${currentSteps[leftIdx].description}\\n${currentSteps[leftIdx].data.length} rows"]\n`;
+        diagram += `    ${rightId}["Right: ${currentSteps[rightIdx].description}\\n${currentSteps[rightIdx].data.length} rows"]\n`;
+        diagram += `    ${stepId}["${step.description}\\n${step.data.length} rows"]\n`;
+        diagram += `    ${leftId} --> ${stepId}\n`;
+        diagram += `    ${rightId} --> ${stepId}\n`;
+        diagram += `    style ${stepId} fill:#F08080\n`;
     }
 
     return diagram;
@@ -736,7 +1054,10 @@ function generateFullExecutionGraph(currentStepIndex) {
         else if (step.type === 'PROJECTION') color = '#87CEEB'; // sky blue
         else if (step.type === 'SELECTION') color = '#FFB6C1'; // pink
         else if (step.type === 'UNION') color = '#DDA0DD'; // plum
-        else if (step.type === 'JOIN') color = '#FFD700'; // gold
+        else if (step.type === 'JOIN' || step.type === 'NATURAL_JOIN') color = '#FFD700'; // gold
+        else if (step.type === 'DIFFERENCE') color = '#FFA500'; // orange
+        else if (step.type === 'INTERSECTION') color = '#98FB98'; // pale green
+        else if (step.type === 'PRODUCT') color = '#F08080'; // light coral
 
         diagram += `    style ${stepId} fill:${color}`;
 
@@ -747,19 +1068,13 @@ function generateFullExecutionGraph(currentStepIndex) {
         diagram += '\n';
     });
 
-    // Create edges based on operation dependencies
+    // Create edges based on operation dependencies using parent tracking
     currentSteps.forEach((step, idx) => {
-        if (step.type === 'PROJECTION' || step.type === 'SELECTION') {
-            // Unary operations - connect to previous step
-            if (idx > 0) {
-                diagram += `    step${idx - 1} --> step${idx}\n`;
-            }
-        } else if (step.type === 'UNION' || step.type === 'JOIN') {
-            // Binary operations - connect to two previous steps
-            if (idx >= 2) {
-                diagram += `    step${idx - 2} --> step${idx}\n`;
-                diagram += `    step${idx - 1} --> step${idx}\n`;
-            }
+        if (step.parents && step.parents.length > 0) {
+            // Connect to all parent steps
+            step.parents.forEach(parentIdx => {
+                diagram += `    step${parentIdx} --> step${idx}\n`;
+            });
         }
     });
 

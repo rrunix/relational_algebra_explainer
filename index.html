@@ -282,13 +282,13 @@
         <div>
             <h2>Database Schema</h2>
             <div class="schema-controls">
-                <select id="databaseSelect" class="db-select" onchange="switchDatabase()">
+                <select id="databaseSelect" class="db-select" onchange="switchDatabase()" style="display:none;">
                     <option value="">Loading databases...</option>
                 </select>
                 <input type="file" id="fileInput" class="file-input" accept=".json" onchange="loadCustomDatabase(event)">
-                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">Load Custom DB</button>
-                <button class="export-btn" onclick="exportCurrentDatabase()">Export Current DB</button>
-                <button class="help-toggle-btn" onclick="toggleFormatHelp()" id="helpToggleBtn">Show Format Help</button>
+                <!-- <button class="upload-btn" onclick="document.getElementById('fileInput').click()">Load Custom DB</button> -->
+                <!-- <button class="export-btn" onclick="exportCurrentDatabase()">Export Current DB</button> -->
+                <!-- <button class="help-toggle-btn" onclick="toggleFormatHelp()" id="helpToggleBtn">Show Format Help</button> -->
                 <button class="schema-toggle-btn" onclick="toggleSchema()" id="schemaToggleBtn">Hide Schema</button>
             </div>
 
@@ -352,7 +352,11 @@
                 <button class="symbol-btn" onclick="insertSymbol('π[]()')">π (Projection)</button>
                 <button class="symbol-btn" onclick="insertSymbol('σ[]()')">σ (Selection)</button>
                 <button class="symbol-btn" onclick="insertSymbol(' ∪ ')">∪ (Union)</button>
-                <button class="symbol-btn" onclick="insertSymbol(' ⋈_{=} ')">⋈ (Join)</button>
+                <button class="symbol-btn" onclick="insertSymbol(' − ')">− (Difference)</button>
+                <button class="symbol-btn" onclick="insertSymbol(' ∩ ')">∩ (Intersection)</button>
+                <button class="symbol-btn" onclick="insertSymbol(' × ')">× (Product)</button>
+                <button class="symbol-btn" onclick="insertSymbol(' ⋈_{=} ')">⋈ (Theta Join)</button>
+                <button class="symbol-btn" onclick="insertSymbol(' ⋈ ')">⋈ (Natural Join)</button>
             </div>
             <textarea id="queryInput" placeholder="Example: π[name,age](σ[age>25](Students))">π[name](σ[age>25](Students))</textarea>
             <br>

@@ -30,13 +30,38 @@
       { "id": 3, "title": "Collect 10 Herbs", "difficulty": "Easy", "reward": 100, "completed": true }
     ]
   },
+  "schema": {
+    "Characters": {
+      "pk": ["id"],
+      "fks": []
+    },
+    "Items": {
+      "pk": ["id"],
+      "fks": []
+    },
+    "Inventory": {
+      "pk": ["character_id", "item_id"],
+      "fks": [
+        { "column": "character_id", "references": "Characters.id" },
+        { "column": "item_id", "references": "Items.id" }
+      ]
+    },
+    "Quests": {
+      "pk": ["id"],
+      "fks": []
+    }
+  },
   "mermaidSchema": "erDiagram\n    Characters {\n        int id PK\n        string name\n        string class\n        int level\n        int hp\n    }\n    Items {\n        int id PK\n        string name\n        string type\n        int damage\n        string rarity\n    }\n    Inventory {\n        int character_id FK\n        int item_id FK\n        int quantity\n    }\n    Quests {\n        int id PK\n        string title\n        string difficulty\n        int reward\n        boolean completed\n    }\n    Characters ||--o{ Inventory : \"id=character_id\"\n    Items ||--o{ Inventory : \"id=item_id\"",
   "examples": [
     "π[name,class,level](Characters)",
     "σ[level>40](Characters)",
     "π[name](σ[rarity=Legendary](Items))",
+    "σ[level>40](Characters) − σ[class=Warrior](Characters)",
+    "σ[type=Consumable](Items) ∩ σ[rarity=Common](Items)",
+    "Characters × Items",
     "Characters ⋈_{id=character_id} Inventory",
-    "π[name,item_id,quantity](Characters ⋈_{id=character_id} Inventory)",
+    "Characters ⋈ Inventory",
+    "π[name,quantity](Characters ⋈ Inventory)",
     "σ[difficulty=Hard](Quests)"
   ]
 }

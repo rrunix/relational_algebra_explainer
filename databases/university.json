@@ -21,6 +21,22 @@
       { "student_id": 4, "course": "Physics 101", "grade": "A" }
     ]
   },
+  "schema": {
+    "Students": {
+      "pk": ["id"],
+      "fks": []
+    },
+    "Teachers": {
+      "pk": ["id"],
+      "fks": []
+    },
+    "Enrollments": {
+      "pk": ["student_id", "course"],
+      "fks": [
+        { "column": "student_id", "references": "Students.id" }
+      ]
+    }
+  },
   "mermaidSchema": "erDiagram\n    Students {\n        int id PK\n        string name\n        int age\n        string major\n    }\n    Teachers {\n        int id PK\n        string name\n        int age\n        string subject\n    }\n    Enrollments {\n        int student_id FK\n        string course\n        string grade\n    }\n    Students ||--o{ Enrollments : \"id=student_id\"",
   "examples": [
     "π[name,age](Students)",
@@ -28,7 +44,11 @@
     "π[name](σ[age>25](Students))",
     "Students ∪ Teachers",
     "π[name](Students) ∪ π[name](Teachers)",
+    "π[name](Students) − π[name](Teachers)",
+    "π[name](Students) ∩ π[name](Teachers)",
+    "Students × Teachers",
     "Students ⋈_{id=student_id} Enrollments",
-    "π[name,course](Students ⋈_{id=student_id} Enrollments)"
+    "Students ⋈ Enrollments",
+    "π[name,course](Students ⋈ Enrollments)"
   ]
 }

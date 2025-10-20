@@ -1,0 +1,61 @@
+{
+  "name": "Publishing",
+  "tables": {
+    "AUTOR": [
+      { "Nombre": "Garcia", "Nacionalidad": "espanola", "Institucion": "URJC" },
+      { "Nombre": "Rossi", "Nacionalidad": "italiana", "Institucion": "UPM" },
+      { "Nombre": "Smith", "Nacionalidad": "americana", "Institucion": "URJC" },
+      { "Nombre": "Muller", "Nacionalidad": "alemana", "Institucion": "UPM" },
+      { "Nombre": "Dupont", "Nacionalidad": "francesa", "Institucion": "UCM" }
+    ],
+    "LIBRO": [
+      { "Titulo": "DatabaseSystems", "Autor": "Garcia", "Editorial": "AddisonWesley", "Editor": "Lopez" },
+      { "Titulo": "SQLFundamentals", "Autor": "Garcia", "Editorial": "RAMA", "Editor": "Martinez" },
+      { "Titulo": "DataMining", "Autor": "Rossi", "Editorial": "AddisonWesley", "Editor": "Lopez" },
+      { "Titulo": "MachineLearning", "Autor": "Smith", "Editorial": "RAMA", "Editor": "Lopez" },
+      { "Titulo": "Algorithms", "Autor": "Muller", "Editorial": "Pearson", "Editor": "Johnson" },
+      { "Titulo": "Networks", "Autor": "Garcia", "Editorial": "Pearson", "Editor": "Martinez" },
+      { "Titulo": "AIBasics", "Autor": "Dupont", "Editorial": "RAMA", "Editor": "Johnson" }
+    ],
+    "EDITOR": [
+      { "Nombre": "Lopez", "Nacionalidad": "espanola", "Institucion": "URJC" },
+      { "Nombre": "Martinez", "Nacionalidad": "espanola", "Institucion": "URJC" },
+      { "Nombre": "Johnson", "Nacionalidad": "americana", "Institucion": "UPM" },
+      { "Nombre": "Garcia", "Nacionalidad": "espanola", "Institucion": "URJC" }
+    ]
+  },
+  "schema": {
+    "AUTOR": {
+      "pk": ["Nombre"],
+      "fks": []
+    },
+    "LIBRO": {
+      "pk": ["Titulo"],
+      "fks": [
+        { "column": "Autor", "references": "AUTOR.Nombre" },
+        { "column": "Editor", "references": "EDITOR.Nombre" }
+      ]
+    },
+    "EDITOR": {
+      "pk": ["Nombre"],
+      "fks": []
+    }
+  },
+  "mermaidSchema": "erDiagram\n    AUTOR {\n        string Nombre PK\n        string Nacionalidad\n        string Institucion\n    }\n    LIBRO {\n        string Titulo PK\n        string Autor FK\n        string Editorial\n        string Editor FK\n    }\n    EDITOR {\n        string Nombre PK\n        string Nacionalidad\n        string Institucion\n    }\n    AUTOR ||--o{ LIBRO : \"Nombre=Autor\"\n    EDITOR ||--o{ LIBRO : \"Nombre=Editor\"",
+  "examples": [
+    "π[Titulo](LIBRO)",
+    "σ[Editorial=AddisonWesley](LIBRO)",
+    "π[Nombre](σ[Institucion=URJC](AUTOR))",
+    "π[Nombre](σ[Institucion=URJC](AUTOR)) ∪ π[Nombre](σ[Institucion=URJC](EDITOR))",
+    "π[Nombre](σ[Institucion=URJC](AUTOR ∪ EDITOR))",
+    "EDITOR − AUTOR",
+    "π[Titulo,Nacionalidad](LIBRO ⋈_{Autor=Nombre} AUTOR)",
+    "π[Titulo,Autor](σ[Nacionalidad=italiana](LIBRO ⋈_{Autor=Nombre} AUTOR))",
+    "π[Titulo,Autor](LIBRO ⋈_{Autor=Nombre} σ[Nacionalidad=italiana](AUTOR))",
+    "π[Institucion](AUTOR ⋈_{Nombre=Autor} σ[Editorial=RAMA](LIBRO))",
+    "π[Institucion](AUTOR ⋈_{Nombre=Autor} (LIBRO − σ[Editorial=RAMA](LIBRO)))",
+    "π[Institucion](AUTOR ⋈_{Nombre=Autor} σ[Editorial!=RAMA](LIBRO))",
+    "π[Nombre](σ[Institucion=URJC](EDITOR ⋈_{Nombre=Editor} (LIBRO ⋈_{Autor=Nombre} σ[Nacionalidad=espanola](AUTOR))))",
+    "π[Nombre](σ[Institucion=UPM](AUTOR ∩ EDITOR))"
+  ]
+}

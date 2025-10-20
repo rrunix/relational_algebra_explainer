@@ -22,13 +22,35 @@
       { "loan_id": 5, "member_id": 104, "book_id": 5, "loan_date": "2024-01-20", "return_date": null }
     ]
   },
+  "schema": {
+    "Books": {
+      "pk": ["id"],
+      "fks": []
+    },
+    "Members": {
+      "pk": ["id"],
+      "fks": []
+    },
+    "Loans": {
+      "pk": ["loan_id"],
+      "fks": [
+        { "column": "member_id", "references": "Members.id" },
+        { "column": "book_id", "references": "Books.id" }
+      ]
+    }
+  },
   "mermaidSchema": "erDiagram\n    Books {\n        int id PK\n        string title\n        string author\n        int year\n        string genre\n    }\n    Members {\n        int id PK\n        string name\n        int age\n        string join_date\n    }\n    Loans {\n        int loan_id PK\n        int member_id FK\n        int book_id FK\n        string loan_date\n        string return_date\n    }\n    Members ||--o{ Loans : \"id=member_id\"\n    Books ||--o{ Loans : \"id=book_id\"",
   "examples": [
     "π[title,author](Books)",
     "σ[year>2000](Books)",
     "π[title](σ[genre=Fiction](Books))",
+    "σ[genre=Fiction](Books) − σ[year>2000](Books)",
+    "σ[genre=Fiction](Books) ∩ σ[year<1950](Books)",
+    "Books × Members",
     "Members ⋈_{id=member_id} Loans",
-    "π[name,title](Members ⋈_{id=member_id} Loans ⋈_{book_id=id} Books)",
+    "Members ⋈ Loans",
+    "Books ⋈ Loans",
+    "π[name,title](Members ⋈ Loans ⋈ Books)",
     "σ[return_date=null](Loans)"
   ]
 }
