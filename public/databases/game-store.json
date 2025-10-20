@@ -28,13 +28,42 @@
       { "id": 4, "game_id": 4, "customer_id": 103, "rating": 5, "comment": "Classic RPG" }
     ]
   },
+  "schema": {
+    "Games": {
+      "pk": ["id"],
+      "fks": []
+    },
+    "Customers": {
+      "pk": ["id"],
+      "fks": []
+    },
+    "Orders": {
+      "pk": ["order_id"],
+      "fks": [
+        { "column": "customer_id", "references": "Customers.id" },
+        { "column": "game_id", "references": "Games.id" }
+      ]
+    },
+    "Reviews": {
+      "pk": ["id"],
+      "fks": [
+        { "column": "game_id", "references": "Games.id" },
+        { "column": "customer_id", "references": "Customers.id" }
+      ]
+    }
+  },
   "mermaidSchema": "erDiagram\n    Games {\n        int id PK\n        string title\n        string genre\n        float price\n        int stock\n    }\n    Customers {\n        int id PK\n        string name\n        string email\n        string membership\n    }\n    Orders {\n        int order_id PK\n        int customer_id FK\n        int game_id FK\n        int quantity\n        string date\n    }\n    Reviews {\n        int id PK\n        int game_id FK\n        int customer_id FK\n        int rating\n        string comment\n    }\n    Customers ||--o{ Orders : \"id=customer_id\"\n    Games ||--o{ Orders : \"id=game_id\"\n    Games ||--o{ Reviews : \"id=game_id\"\n    Customers ||--o{ Reviews : \"id=customer_id\"",
   "examples": [
     "π[title,price](Games)",
     "σ[price<50](Games)",
     "π[title](σ[genre=RPG](Games))",
+    "σ[price<50](Games) − σ[genre=Racing](Games)",
+    "σ[genre=RPG](Games) ∩ σ[price<50](Games)",
+    "Games × Customers",
     "Customers ⋈_{id=customer_id} Orders",
-    "π[name,title](Customers ⋈_{id=customer_id} Orders ⋈_{game_id=id} Games)",
+    "Customers ⋈ Orders",
+    "Games ⋈ Orders",
+    "π[name,title](Customers ⋈ Orders ⋈ Games)",
     "σ[rating=5](Reviews)"
   ]
 }
